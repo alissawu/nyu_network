@@ -2,17 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { api } from "@/convex/_generated/api";
 import { convexHttp } from "@/lib/convex-client";
 
-// 10 requests per day per IP
+// 10 requests per day per email
 const RATE_LIMIT = 10;
 const RATE_WINDOW_MS = 24 * 60 * 60 * 1000;
-const ipRequests = new Map<string, { count: number; windowStart: number }>();
+const emailRequests = new Map<string, { count: number; windowStart: number }>();
 
-function checkRateLimit(ip: string): boolean {
+function checkRateLimit(email: string): boolean {
+  const key = email.trim().toLowerCase();
   const now = Date.now();
-  const entry = ipRequests.get(ip);
+  const entry = emailRequests.get(key);
 
   if (!entry || now - entry.windowStart > RATE_WINDOW_MS) {
-    ipRequests.set(ip, { count: 1, windowStart: now });
+    emailRequests.set(key, { count: 1, windowStart: now });
     return true;
   }
 
@@ -40,17 +41,6 @@ interface ApplyPayload {
 }
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    ?? req.headers.get("x-real-ip")
-    ?? "unknown";
-
-  if (!checkRateLimit(ip)) {
-    return NextResponse.json(
-      { error: "Rate limit exceeded. 10 requests per day." },
-      { status: 429 }
-    );
-  }
-
   let body: ApplyPayload;
   try {
     body = await req.json();
@@ -65,6 +55,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { error: "Missing required fields: slug, email, fullName, major, socials." },
       { status: 400 }
+    );
+  }
+
+  if (!checkRateLimit(body.email)) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded. 10 requests per day per email." },
+      { status: 429 }
     );
   }
 

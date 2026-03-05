@@ -1,0 +1,138 @@
+import { ConvexError, v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
+import { mutation, query } from "./_generated/server";
+import { assertSocialRequirements, normalizeSocials } from "./lib/socials";
+
+const socialInput = v.object({
+  platform: v.union(v.literal("x"), v.literal("linkedin"), v.literal("email"), v.literal("github"), v.literal("website")),
+  url: v.string()
+});
+
+const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+export const searchApprovedConnections = query({
+  args: {
+    query: v.optional(v.string())
+  },
+  handler: async (ctx, args) => {
+    const term = args.query?.trim().toLowerCase() ?? "";
+    const profiles = await ctx.db.query("profiles").collect();
+
+    return profiles
+      .filter((profile) => !term || profile.fullName.toLowerCase().includes(term) || profile.major.toLowerCase().includes(term))
+      .sort((a, b) => a.fullName.localeCompare(b.fullName))
+      .slice(0, 25)
+      .map((profile) => ({
+        id: profile._id,
+        fullName: profile.fullName,
+        major: profile.major,
+        headline: profile.headline,
+        avatarUrl: profile.avatarUrl
+      }));
+  }
+});
+
+export const submit = mutation({
+  args: {
+    email: v.string(),
+    fullName: v.string(),
+    major: v.string(),
+    headline: v.optional(v.string()),
+    bio: v.optional(v.string()),
+    avatarKind: v.union(v.literal("upload"), v.literal("url")),
+    avatarUrl: v.optional(v.string()),
+    avatarStorageId: v.optional(v.id("_storage")),
+    socials: v.array(socialInput),
+    connectionTargetIds: v.array(v.id("profiles"))
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const email = normalizeEmail(args.email);
+
+    if (!email) {
+      throw new ConvexError("Email is required.");
+    }
+    if (!args.major.trim()) {
+      throw new ConvexError("Major is required.");
+    }
+
+    const normalizedSocials = normalizeSocials(args.socials);
+    assertSocialRequirements(normalizedSocials);
+
+    const existingPending = await ctx.db
+      .query("applications")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .first();
+
+    if (existingPending?.status === "pending") {
+      throw new ConvexError("An application with this email is already pending.");
+    }
+
+    const existingApproved = await ctx.db
+      .query("profiles")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .first();
+
+    if (existingApproved) {
+      throw new ConvexError("This email is already in the network.");
+    }
+
+    let avatarUrl = args.avatarUrl?.trim();
+    if (args.avatarKind === "upload") {
+      if (!args.avatarStorageId) {
+        throw new ConvexError("Upload avatar selected but no uploaded file was provided.");
+      }
+      avatarUrl = (await ctx.storage.getUrl(args.avatarStorageId)) ?? undefined;
+    }
+
+    const applicationId = await ctx.db.insert("applications", {
+      email,
+      fullName: args.fullName.trim(),
+      major: args.major.trim(),
+      headline: args.headline?.trim() || undefined,
+      bio: args.bio?.trim() || undefined,
+      avatarKind: args.avatarKind,
+      avatarUrl,
+      avatarStorageId: args.avatarStorageId,
+      status: "pending",
+      createdAt: now,
+      updatedAt: now
+    });
+
+    for (const social of normalizedSocials) {
+      await ctx.db.insert("application_social_links", {
+        applicationId,
+        platform: social.platform,
+        url: social.url,
+        createdAt: now
+      });
+    }
+
+    const dedupedTargets = Array.from(new Set(args.connectionTargetIds));
+    for (const targetProfileId of dedupedTargets) {
+      const target = await ctx.db.get(targetProfileId as Id<"profiles">);
+      if (!target) {
+        throw new ConvexError("Selected connection target does not exist.");
+      }
+
+      await ctx.db.insert("application_connection_intents", {
+        applicationId,
+        targetProfileId,
+        createdAt: now
+      });
+    }
+
+    await ctx.db.insert("audit_log", {
+      action: "application.submit",
+      entityType: "application",
+      entityId: applicationId,
+      metadata: {
+        email,
+        connectionIntents: dedupedTargets.length
+      },
+      createdAt: now
+    });
+
+    return { applicationId };
+  }
+});

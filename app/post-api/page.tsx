@@ -19,22 +19,22 @@ function buildTemplate(origin: string) {
   "fullName": "Your Name",
   "major": "Computer Science",
 
-  // required — use the upload box below (auto-injected on submit)
-  // or paste any hosted image URL (resized to 256x256)
-  "avatarUrl": "",
+  // optional — what are you building?
+  "bio": "tell us what you're working on...",
 
   // optional
   "website": "https://yoursite.com",
-  "headline": "building cool stuff",
-  "bio": "tell us about yourself",
 
   // at least one required
   "socials": {
     "x": "https://x.com/you",
     "linkedin": "https://linkedin.com/in/you",
-    "email": "you@nyu.edu",
     "github": "https://github.com/you"
   },
+
+  // required — use the upload box below (auto-injected on submit)
+  // or paste any hosted image URL (resized to 256x256)
+  "avatarUrl": "",
 
   // optional — slugs of members you know
   // search members on the right to find slugs

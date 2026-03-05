@@ -64,13 +64,11 @@ interface ApplyPayload {
   fullName: string;
   major: string;
   website?: string;
-  headline?: string;
   bio?: string;
   avatarUrl: string;
   socials?: {
     x?: string;
     linkedin?: string;
-    email?: string;
     github?: string;
   };
   connections?: string[];
@@ -98,7 +96,7 @@ export async function POST(req: NextRequest) {
   const providedSocials = Object.entries(socials).filter(([, v]) => v && v.trim() !== "");
   if (providedSocials.length === 0) {
     return NextResponse.json(
-      { error: "At least one social link is required (x, linkedin, email, github)." },
+      { error: "At least one social link is required (x, linkedin, github)." },
       { status: 400 }
     );
   }
@@ -128,7 +126,6 @@ export async function POST(req: NextRequest) {
       fullName: body.fullName,
       major: body.major,
       website: body.website || undefined,
-      headline: body.headline || undefined,
       bio: body.bio || undefined,
       avatarKind,
       avatarUrl,

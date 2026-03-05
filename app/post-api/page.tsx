@@ -58,9 +58,8 @@ export default function PostApiPage() {
 
   // Set origin and template after mount to avoid hydration mismatch
   useEffect(() => {
-    const o = window.location.origin;
-    setOrigin(o);
-    setBody(buildTemplate(o));
+    setOrigin("https://nyu-network.vercel.app");
+    setBody(buildTemplate("https://nyu-network.vercel.app"));
   }, []);
 
   // Image upload state (client-side only until submit)

@@ -900,7 +900,7 @@ a {
   margin: 0 auto;
   padding: 2rem;
   font-family: 'Courier New', Courier, monospace;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: var(--foreground);
 }
 
@@ -937,7 +937,7 @@ a {
 }
 
 .postapi-header {
-  font-size: 1rem;
+  font-size: 0.85rem;
   font-weight: bold;
 }
 
@@ -957,7 +957,7 @@ a {
   background: var(--card-bg);
   border: 1px solid var(--border);
   padding: 0.75rem 1rem;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   overflow-x: auto;
   white-space: pre;
   color: var(--secondary);
@@ -971,7 +971,7 @@ a {
   border: 1px solid var(--border);
   color: var(--foreground);
   font-family: 'Courier New', Courier, monospace;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   padding: 1rem;
   resize: vertical;
   outline: none;
@@ -989,7 +989,7 @@ a {
   border: 1px solid var(--foreground);
   color: var(--foreground);
   font-family: 'Courier New', Courier, monospace;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   padding: 0.5rem 1rem;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
@@ -1007,7 +1007,7 @@ a {
 
 .postapi-response {
   padding: 0.75rem 1rem;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
@@ -1047,7 +1047,7 @@ a {
 }
 
 .postapi-sidebar-title {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   color: var(--secondary);
   text-transform: lowercase;
 }
@@ -1058,7 +1058,7 @@ a {
   border: 1px solid var(--border);
   color: var(--foreground);
   font-family: 'Courier New', Courier, monospace;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   padding: 0.4rem 0.6rem;
   outline: none;
 }
@@ -1093,23 +1093,23 @@ a {
 
 .postapi-member-slug {
   color: var(--foreground);
-  font-size: 0.8rem;
+  font-size: 0.7rem;
 }
 
 .postapi-member-name {
   color: var(--secondary);
-  font-size: 0.75rem;
+  font-size: 0.65rem;
 }
 
 .postapi-member-major {
   color: var(--tertiary);
-  font-size: 0.7rem;
+  font-size: 0.6rem;
 }
 
 .postapi-member-empty {
   padding: 0.6rem;
   color: var(--tertiary);
-  font-size: 0.75rem;
+  font-size: 0.65rem;
 }
 
 /* Upload */
@@ -1120,13 +1120,13 @@ a {
 }
 
 .postapi-upload-label {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   color: var(--secondary);
 }
 
 .postapi-upload-hint {
   color: var(--tertiary);
-  font-size: 0.75rem;
+  font-size: 0.65rem;
 }
 
 .postapi-upload-row {
@@ -1159,7 +1159,7 @@ a {
   background: none;
   color: var(--foreground);
   font-family: 'Courier New', Courier, monospace;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   padding: 0.35rem 0.6rem;
   cursor: pointer;
   transition: border-color 0.15s;
@@ -1174,7 +1174,7 @@ a {
   border: none;
   color: var(--tertiary);
   font-family: 'Courier New', Courier, monospace;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   cursor: pointer;
   padding: 0;
 }
@@ -1184,6 +1184,6 @@ a {
 }
 
 .postapi-upload-error {
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   color: #ef4444;
 }

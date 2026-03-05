@@ -25,6 +25,7 @@ export const listProfiles = query({
     const filtered = profiles
       .map((profile) => ({
         id: profile._id,
+        slug: profile.slug,
         fullName: profile.fullName,
         major: profile.major,
         website: profile.website,

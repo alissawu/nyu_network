@@ -124,10 +124,10 @@ export default function SearchableContent() {
                         </p>
                         <p>
                             want to join? <a
-                                href="/apply"
+                                href="/post-api"
                                 className="join-link"
                             >
-                                apply here
+                                send a POST request
                             </a>
                         </p>
                     </div>

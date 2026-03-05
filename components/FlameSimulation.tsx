@@ -47,6 +47,7 @@ const FLAME_ART = [
 const SOLID = new Set(["@", "#", "%", "*", "+", "=", "-", ":"]);
 // Characters considered "wispy" (light edge material)
 const WISPY = new Set([".", ":"]);
+const DENSITY_SCALE = " .:-=+*#%@";
 
 // Flicker replacement chars for edges
 const FLICKER_CHARS = [" ", ".", ":", "-", "=", "+", "*", "#"];
@@ -120,7 +121,7 @@ export default function FlameSimulation() {
       }
     }
 
-    // Render with grayscale intensity
+    // Render with theme-relative grayscale intensity
     const htmlRows: string[] = [];
     for (let r = 0; r < rows; r++) {
       let line = "";
@@ -129,11 +130,11 @@ export default function FlameSimulation() {
         if (ch === " ") {
           line += " ";
         } else {
-          // Map char density to brightness
-          const density = " .:-=+*#%@".indexOf(ch);
-          const v = density >= 0 ? density / 9 : 0.3;
-          const g = Math.round(80 + v * 175);
-          line += `<span style="color:rgb(${g},${g},${g})">${ch}</span>`;
+          // Map char density to amount of foreground color mixed into background.
+          const density = DENSITY_SCALE.indexOf(ch);
+          const v = density >= 0 ? density / (DENSITY_SCALE.length - 1) : 0.3;
+          const foregroundWeight = Math.round(28 + v * 62);
+          line += `<span class="flame-char" style="--flame-foreground-weight:${foregroundWeight}%">${ch}</span>`;
         }
       }
       htmlRows.push(`<div class="flame-row">${line}</div>`);
@@ -168,10 +169,22 @@ export default function FlameSimulation() {
           white-space: pre;
           user-select: none;
           pointer-events: none;
+          filter: contrast(1.08);
+          transition: filter 0.2s ease;
         }
         .flame-row {
           display: block;
           line-height: 1.15;
+        }
+        .flame-char {
+          color: var(--foreground);
+          color: color-mix(in srgb, var(--foreground) var(--flame-foreground-weight), var(--background));
+        }
+
+        @media (prefers-contrast: more) {
+          .flame-art {
+            filter: contrast(1.45) brightness(1.08);
+          }
         }
       `}</style>
     </>

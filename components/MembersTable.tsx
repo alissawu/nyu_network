@@ -37,6 +37,7 @@ export default function MembersTable({ members, searchQuery }: MembersTableProps
         return Math.min(190, Math.max(88, estimatedWidth));
     }, [maxSocialCount]);
     const tableStyle = { ['--links-col-width' as '--links-col-width']: `${linksColumnWidth}px` } as React.CSSProperties;
+    const memberCountLabel = `${members.length} member${members.length !== 1 ? 's' : ''}`;
 
     const highlightText = (text: string | null | undefined) => {
         if (!text || !searchQuery) return text || '';
@@ -60,10 +61,10 @@ export default function MembersTable({ members, searchQuery }: MembersTableProps
             <div className="search-results-info">
                 {searchQuery ? (
                     members.length === 0
-                        ? `No results found for "${searchQuery}"`
-                        : `Found ${members.length} member${members.length !== 1 ? 's' : ''}`
+                        ? `0 members found for "${searchQuery}"`
+                        : `${memberCountLabel} found`
                 ) : (
-                    <span className="search-results-placeholder">&nbsp;</span>
+                    memberCountLabel
                 )}
             </div>
             <table className="members-table" style={tableStyle}>

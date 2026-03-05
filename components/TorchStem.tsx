@@ -26,10 +26,14 @@ export default function TorchStem() {
           {line.split("").map((ch, idx) => {
             if (ch === " ") return <span key={idx}> </span>;
             const density = DENSITY_SCALE.indexOf(ch);
-            const v = density >= 0 ? density / 9 : 0.3;
-            const g = Math.round(80 + v * 175);
+            const v = density >= 0 ? density / (DENSITY_SCALE.length - 1) : 0.3;
+            const foregroundWeight = Math.round(32 + v * 56);
             return (
-              <span key={idx} style={{ color: `rgb(${g},${g},${g})` }}>
+              <span
+                key={idx}
+                className="stem-char"
+                style={{ ["--stem-foreground-weight" as "--stem-foreground-weight"]: `${foregroundWeight}%` } as React.CSSProperties}
+              >
                 {ch}
               </span>
             );
@@ -45,10 +49,22 @@ export default function TorchStem() {
           margin: 0;
           padding: 0;
           white-space: pre;
+          filter: contrast(1.08);
+          transition: filter 0.2s ease;
         }
         .stem-row {
           display: block;
           line-height: 1.15;
+        }
+        .stem-char {
+          color: var(--foreground);
+          color: color-mix(in srgb, var(--foreground) var(--stem-foreground-weight), var(--background));
+        }
+
+        @media (prefers-contrast: more) {
+          .torch-stem {
+            filter: contrast(1.45) brightness(1.08);
+          }
         }
       `}</style>
     </pre>

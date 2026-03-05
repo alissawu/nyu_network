@@ -30,12 +30,12 @@ interface ApplyPayload {
   website?: string;
   headline?: string;
   bio?: string;
-  avatarUrl?: string;
-  socials: {
-    x: string;
-    linkedin: string;
-    email: string;
-    github: string;
+  avatarUrl: string;
+  socials?: {
+    x?: string;
+    linkedin?: string;
+    email?: string;
+    github?: string;
   };
   connections?: string[];
 }
@@ -51,9 +51,18 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (!body.slug || !body.email || !body.fullName || !body.major || !body.socials) {
+  if (!body.slug || !body.email || !body.fullName || !body.major || !body.avatarUrl) {
     return NextResponse.json(
-      { error: "Missing required fields: slug, email, fullName, major, socials." },
+      { error: "Missing required fields: slug, email, fullName, major, avatarUrl." },
+      { status: 400 }
+    );
+  }
+
+  const socials = body.socials ?? {};
+  const providedSocials = Object.entries(socials).filter(([, v]) => v && v.trim() !== "");
+  if (providedSocials.length === 0) {
+    return NextResponse.json(
+      { error: "At least one social link is required (x, linkedin, email, github)." },
       { status: 400 }
     );
   }
@@ -62,13 +71,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { error: "Rate limit exceeded. 10 requests per day per email." },
       { status: 429 }
-    );
-  }
-
-  if (!body.socials.x || !body.socials.linkedin || !body.socials.email || !body.socials.github) {
-    return NextResponse.json(
-      { error: "All four socials are required: x, linkedin, email, github." },
-      { status: 400 }
     );
   }
 
@@ -82,13 +84,8 @@ export async function POST(req: NextRequest) {
       headline: body.headline || undefined,
       bio: body.bio || undefined,
       avatarKind: "url",
-      avatarUrl: body.avatarUrl || undefined,
-      socials: [
-        { platform: "x", url: body.socials.x },
-        { platform: "linkedin", url: body.socials.linkedin },
-        { platform: "email", url: body.socials.email },
-        { platform: "github", url: body.socials.github },
-      ],
+      avatarUrl: body.avatarUrl,
+      socials: providedSocials.map(([platform, url]) => ({ platform, url: url! })),
       connectionTargetIds: [],
       connectionSlugs: body.connections ?? [],
     });

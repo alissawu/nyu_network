@@ -105,9 +105,9 @@ export default function SearchableContent() {
         <main className="main-container">
             <AsciiBackground />
             <nav className="top-nav">
-                <a href="/sign-in">sign in</a>
-                <a href="/me">profile</a>
                 <a href="/admin">admin</a>
+                <a href="/me">profile</a>
+                <a href="/sign-in">sign in</a>
             </nav>
             <div className="content-wrapper">
                 <div className="header-section">

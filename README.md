@@ -3,6 +3,6 @@
 A repo housing the website that lets you see the top engineers, VCs, and creatives within our community.
 
 
-How we review:
+## How we review:
 
-We rely on the referral of people already in
+We rely on the referral of people already in the network to help us identify and evaluate potential new members.

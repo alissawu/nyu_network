@@ -43,7 +43,7 @@ function buildTemplate(origin: string) {
 }
 
 function extractJsonFromCurl(input: string): string {
-  const match = input.match(/-d\s+'([\s\S]*?)'\s*$/);
+  const match = input.match(/-d\s+'([\s\S]*)'\s*$/);
   if (match) return match[1];
   return input;
 }
@@ -133,7 +133,10 @@ export default function PostApiPage() {
     try {
       // Extract JSON body from curl command, strip comments, parse
       const jsonStr = extractJsonFromCurl(body);
-      const stripped = jsonStr.replace(/\/\/.*$/gm, "");
+      // Strip // comments only outside of quoted strings
+      const stripped = jsonStr.replace(/"(?:[^"\\]|\\.)*"|\/\/.*$/gm, (m) =>
+        m.startsWith('"') ? m : ""
+      );
       let parsed: any;
       try {
         parsed = JSON.parse(stripped);

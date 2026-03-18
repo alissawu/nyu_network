@@ -5,7 +5,6 @@ import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import MembersTable, { type MemberRow } from './MembersTable';
 import NetworkGraph from './NetworkGraph';
-import AsciiBackground from './AsciiBackground';
 import { Search } from 'lucide-react';
 import AsciiFlame from './AsciiFlame';
 
@@ -20,19 +19,23 @@ function shuffleArray<T>(array: T[]): T[] {
 
 interface GraphSnapshot {
     version: number;
+    currentVersion: number;
     generatedAt: string;
     nodes: Array<{ id: string; name: string; avatarUrl?: string; fireScore: number }>;
     edges: Array<{ source: string; target: string; kind: 'connection' | 'vouch' }>;
+    dirty: boolean;
+    dirtySince?: number;
+    lastBuiltAt?: number;
 }
 
 export default function SearchableContent() {
     const [searchQuery, setSearchQuery] = useState('');
-    const [graphData, setGraphData] = useState<GraphSnapshot | null>(null);
     const [shuffledOnce, setShuffledOnce] = useState(false);
     const [shuffleOrder, setShuffleOrder] = useState<string[]>([]);
 
     const allProfiles = useQuery(api.search.listProfiles, {});
     const profileSocialRows = useQuery(api.search.listProfileSocials, {});
+    const graphData = useQuery(api.graph.getCurrentSnapshot, {}) as GraphSnapshot | undefined;
 
     const socialsByProfileId = useMemo(() => {
         const map = new Map<string, { platform: string; url: string }[]>();
@@ -45,14 +48,6 @@ export default function SearchableContent() {
         }
         return map;
     }, [profileSocialRows]);
-
-    // Fetch graph snapshot
-    useEffect(() => {
-        fetch('/api/graph', { cache: 'no-store' })
-            .then(res => res.json())
-            .then(data => setGraphData(data as GraphSnapshot))
-            .catch(err => console.error('Failed to fetch graph:', err));
-    }, []);
 
     // Shuffle order once when profiles first load
     useEffect(() => {

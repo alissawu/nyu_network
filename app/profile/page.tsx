@@ -4,12 +4,20 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
+import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 import { ALL_SOCIALS, type SocialInput, type SocialPlatform } from "@/lib/socials";
 
 const BIO_WORD_LIMIT = 200;
 type Tab = "profile" | "connections" | "vouches" | "security";
+type GraphStatus = {
+  currentVersion: number;
+  generatedAt?: string;
+  dirty: boolean;
+  dirtySince?: number;
+  lastBuiltAt?: number;
+};
 
 const countWords = (value: string) => {
   const trimmed = value.trim();
@@ -152,9 +160,12 @@ export default function ProfilePage() {
   }, [ensureMemberAccount, session?.user, linkStatus]);
 
   const self = useQuery(api.member.getSelf, linkStatus === "linked" ? {} : "skip");
+  const graphStatus = useQuery(api.graph.getCurrentStatus, {}) as GraphStatus | undefined;
   const options = useQuery(api.applications.searchApprovedConnections, {
     query: connectionSearch || undefined,
   });
+  const [pendingGraphVersion, setPendingGraphVersion] = useState<number | null>(null);
+  const [sawDirtySincePending, setSawDirtySincePending] = useState(false);
 
   // ── Load self ──
   useEffect(() => {
@@ -203,6 +214,27 @@ export default function ProfilePage() {
     for (const o of optionsList) m.set(o.id, o);
     return m;
   }, [optionsList]);
+
+  useEffect(() => {
+    if (pendingGraphVersion === null || !graphStatus) {
+      return;
+    }
+
+    if (graphStatus.dirty && !sawDirtySincePending) {
+      setSawDirtySincePending(true);
+      return;
+    }
+
+    if (sawDirtySincePending && !graphStatus.dirty && graphStatus.currentVersion > pendingGraphVersion) {
+      toast.success("Graph refreshed. Your updates are now live.", {
+        id: "graph-refresh-status",
+        dismissible: true,
+        closeButton: true,
+      });
+      setPendingGraphVersion(null);
+      setSawDirtySincePending(false);
+    }
+  }, [graphStatus, pendingGraphVersion, sawDirtySincePending]);
 
   // ─── Auth redirect / bare loading ────────────────────────────────────────
   if (authPending) return null;
@@ -313,6 +345,16 @@ export default function ProfilePage() {
     setSocials((current) => ({ ...current, [platform]: url }));
   };
 
+  const notifyGraphRefreshPending = () => {
+    setPendingGraphVersion(graphStatus?.currentVersion ?? 0);
+    setSawDirtySincePending(false);
+    toast.loading("Saved. Graph refresh in progress (usually 30–90s).", {
+      id: "graph-refresh-status",
+      dismissible: true,
+      closeButton: true,
+    });
+  };
+
   const toggleConnection = async (id: string) => {
     const next = selectedConnections.includes(id)
       ? selectedConnections.filter((v) => v !== id)
@@ -321,10 +363,14 @@ export default function ProfilePage() {
     setConnectionSaving(true);
     try {
       await setConnectionsMutation({ targetProfileIds: next as any });
+      notifyGraphRefreshPending();
       setConnectionSaved(true);
       setTimeout(() => setConnectionSaved(false), 2000);
-    } catch {
-      // ignore
+    } catch (mutationError) {
+      toast.error(mutationError instanceof Error ? mutationError.message : "Failed to update connections.", {
+        dismissible: true,
+        closeButton: true,
+      });
     } finally {
       setConnectionSaving(false);
     }
@@ -341,10 +387,14 @@ export default function ProfilePage() {
     setVouchSaving(true);
     try {
       await setTopVouchesMutation({ targetProfileIds: next as any });
+      notifyGraphRefreshPending();
       setVouchSaved(true);
       setTimeout(() => setVouchSaved(false), 2000);
-    } catch {
-      // ignore
+    } catch (mutationError) {
+      toast.error(mutationError instanceof Error ? mutationError.message : "Failed to update vouches.", {
+        dismissible: true,
+        closeButton: true,
+      });
     } finally {
       setVouchSaving(false);
     }

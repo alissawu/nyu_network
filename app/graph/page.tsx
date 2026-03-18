@@ -1,12 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 type GraphSnapshot = {
   version: number;
+  currentVersion: number;
   generatedAt: string;
   nodes: Array<{ id: string; name: string; avatarUrl?: string; fireScore: number }>;
   edges: Array<{ source: string; target: string; kind: "connection" | "vouch" }>;
+  dirty: boolean;
+  dirtySince?: number;
+  lastBuiltAt?: number;
 };
 
 const WIDTH = 1000;
@@ -32,27 +38,9 @@ const positionNodes = (nodes: GraphSnapshot["nodes"]) => {
 };
 
 export default function GraphPage() {
-  const [snapshot, setSnapshot] = useState<GraphSnapshot | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const snapshot = useQuery(api.graph.getCurrentSnapshot, {}) as GraphSnapshot | undefined;
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setError(null);
-        const response = await fetch("/api/graph", { cache: "no-store" });
-        if (!response.ok) {
-          throw new Error("Failed to load graph snapshot.");
-        }
-        setSnapshot((await response.json()) as GraphSnapshot);
-      } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "Unable to load graph.");
-      }
-    };
-
-    load();
-  }, []);
-
-  const positioned = useMemo(() => (snapshot ? positionNodes(snapshot.nodes) : []), [snapshot]);
+  const positioned = useMemo(() => (snapshot ? positionNodes(snapshot.nodes) : []), [snapshot?.version, snapshot?.nodes]);
   const byId = useMemo(() => new Map(positioned.map((node) => [node.id, node])), [positioned]);
 
   return (
@@ -66,7 +54,6 @@ export default function GraphPage() {
       </div>
 
       <div className="brutal-card overflow-hidden p-3">
-        {error ? <p className="p-6 text-sm text-red-600">{error}</p> : null}
         {!snapshot ? <p className="p-6 text-sm text-[var(--muted)]">Loading graph snapshot...</p> : null}
         {snapshot ? (
           <div className="relative overflow-auto">
@@ -114,9 +101,16 @@ export default function GraphPage() {
       </div>
 
       {snapshot ? (
-        <p className="mono text-xs text-[var(--muted)]">
-          Snapshot v{snapshot.version} generated at {new Date(snapshot.generatedAt).toLocaleString()}.
-        </p>
+        <div className="space-y-1">
+          <p className="mono text-xs text-[var(--muted)]">
+            Snapshot v{snapshot.version} generated at {new Date(snapshot.generatedAt).toLocaleString()}.
+          </p>
+          {snapshot.dirty ? (
+            <p className="mono text-xs text-[var(--muted)]">
+              Update in progress. Graph refresh typically completes within 30–90 seconds.
+            </p>
+          ) : null}
+        </div>
       ) : null}
     </section>
   );

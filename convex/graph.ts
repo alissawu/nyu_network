@@ -5,8 +5,30 @@ import { resolveProfileAvatarUrl } from "./lib/avatar";
 import { buildGraphSnapshot } from "./lib/graph";
 import { clearGraphDirty, getGraphMeta, markGraphDirty } from "./lib/graphState";
 
+const GRAPH_META_KEY = "primary";
+const GRAPH_SNAPSHOT_RETENTION_LIMIT = 100;
+
 const getApprovedProfiles = async (ctx: { db: any }) => {
   return (await ctx.db.query("profiles").collect()) as Doc<"profiles">[];
+};
+
+const snapshotByteSize = (snapshot: unknown) => new TextEncoder().encode(JSON.stringify(snapshot)).length;
+
+const pruneOldSnapshots = async (ctx: any) => {
+  const allSnapshots = (await ctx.db.query("graph_snapshots").collect()) as Doc<"graph_snapshots">[];
+  if (allSnapshots.length <= GRAPH_SNAPSHOT_RETENTION_LIMIT) {
+    return 0;
+  }
+
+  const staleSnapshots = allSnapshots
+    .sort((a, b) => b.generatedAt - a.generatedAt)
+    .slice(GRAPH_SNAPSHOT_RETENTION_LIMIT);
+
+  for (const snapshot of staleSnapshots) {
+    await ctx.db.delete(snapshot._id);
+  }
+
+  return staleSnapshots.length;
 };
 
 const buildFireScores = ({
@@ -38,6 +60,7 @@ const buildFireScores = ({
 };
 
 export const rebuildGraphSnapshotNow = async (ctx: any, now: number) => {
+  const startedAt = Date.now();
   const profiles = await getApprovedProfiles(ctx);
   const approvedSet = new Set(profiles.map((profile) => profile._id));
 
@@ -77,7 +100,7 @@ export const rebuildGraphSnapshotNow = async (ctx: any, now: number) => {
     fireByProfile
   });
 
-  await ctx.db.insert("graph_snapshots", {
+  const insertedSnapshotId = await ctx.db.insert("graph_snapshots", {
     version,
     isCurrent: true,
     snapshot,
@@ -85,11 +108,35 @@ export const rebuildGraphSnapshotNow = async (ctx: any, now: number) => {
   });
 
   await clearGraphDirty(ctx, now);
+
+  const deletedSnapshots = await pruneOldSnapshots(ctx);
+  const rebuildDurationMs = Date.now() - startedAt;
+  const snapshotBytes = snapshotByteSize(snapshot);
+
+  await ctx.db.insert("audit_log", {
+    action: "graph.snapshot.rebuild",
+    entityType: "graph_snapshot",
+    entityId: insertedSnapshotId,
+    metadata: {
+      version,
+      nodeCount: snapshot.nodes.length,
+      edgeCount: snapshot.edges.length,
+      snapshotBytes,
+      rebuildDurationMs,
+      deletedSnapshots
+    },
+    createdAt: Date.now()
+  });
 };
 
 export const getCurrentSnapshot = query({
   args: {},
   handler: async (ctx) => {
+    const meta = await ctx.db
+      .query("graph_meta")
+      .withIndex("by_key", (q) => q.eq("key", GRAPH_META_KEY))
+      .first();
+
     const row = await ctx.db
       .query("graph_snapshots")
       .withIndex("by_is_current", (q) => q.eq("isCurrent", true))
@@ -98,9 +145,13 @@ export const getCurrentSnapshot = query({
     if (!row) {
       return {
         version: 0,
+        currentVersion: 0,
         generatedAt: new Date(0).toISOString(),
         nodes: [],
-        edges: []
+        edges: [],
+        dirty: Boolean(meta?.dirtySince),
+        dirtySince: meta?.dirtySince,
+        lastBuiltAt: meta?.lastBuiltAt
       };
     }
 
@@ -122,7 +173,34 @@ export const getCurrentSnapshot = query({
 
     return {
       ...row.snapshot,
+      currentVersion: row.version,
+      dirty: Boolean(meta?.dirtySince),
+      dirtySince: meta?.dirtySince,
+      lastBuiltAt: meta?.lastBuiltAt,
       nodes
+    };
+  }
+});
+
+export const getCurrentStatus = query({
+  args: {},
+  handler: async (ctx) => {
+    const meta = await ctx.db
+      .query("graph_meta")
+      .withIndex("by_key", (q) => q.eq("key", GRAPH_META_KEY))
+      .first();
+
+    const row = await ctx.db
+      .query("graph_snapshots")
+      .withIndex("by_is_current", (q) => q.eq("isCurrent", true))
+      .first();
+
+    return {
+      currentVersion: row?.version ?? 0,
+      generatedAt: row ? new Date(row.generatedAt).toISOString() : undefined,
+      dirty: Boolean(meta?.dirtySince),
+      dirtySince: meta?.dirtySince,
+      lastBuiltAt: meta?.lastBuiltAt
     };
   }
 });

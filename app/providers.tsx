@@ -3,6 +3,7 @@
 import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
 import { ConvexReactClient } from "convex/react";
 import { type ReactNode, useMemo } from "react";
+import { Toaster } from "sonner";
 import { authClient } from "@/lib/auth-client";
 
 export const Providers = ({ children, initialToken }: { children: ReactNode; initialToken: string | null }) => {
@@ -15,6 +16,15 @@ export const Providers = ({ children, initialToken }: { children: ReactNode; ini
   return (
     <ConvexBetterAuthProvider client={client} authClient={authClient} initialToken={initialToken ?? undefined}>
       {children}
+      <Toaster
+        position="top-right"
+        theme="dark"
+        richColors
+        closeButton
+        toastOptions={{
+          closeButton: true,
+        }}
+      />
     </ConvexBetterAuthProvider>
   );
 };

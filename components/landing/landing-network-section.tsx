@@ -8,9 +8,13 @@ import { api } from "@/convex/_generated/api";
 
 type GraphSnapshot = {
   version: number;
+  currentVersion: number;
   generatedAt: string;
   nodes: Array<{ id: string; name: string; avatarUrl?: string; fireScore: number }>;
   edges: Array<{ source: string; target: string; kind: "connection" | "vouch" }>;
+  dirty: boolean;
+  dirtySince?: number;
+  lastBuiltAt?: number;
 };
 type MemberSocialPlatform = "x" | "linkedin" | "email" | "github";
 type MemberRecord = {
@@ -77,8 +81,7 @@ const socialIcon = (platform: MemberSocialPlatform) => {
 
 export function LandingNetworkSection() {
   const members = useQuery(api.search.listProfiles, {}) as MemberRecord[] | undefined;
-  const [snapshot, setSnapshot] = useState<GraphSnapshot | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const snapshot = useQuery(api.graph.getCurrentSnapshot, {}) as GraphSnapshot | undefined;
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [positions, setPositions] = useState<Record<string, Point>>({});
@@ -86,25 +89,19 @@ export function LandingNetworkSection() {
   const dragOffset = useRef<DragOffset>({ x: 0, y: 0 });
 
   useEffect(() => {
-    const loadSnapshot = async () => {
-      try {
-        setError(null);
-        const response = await fetch("/api/graph", { cache: "no-store" });
-        if (!response.ok) {
-          throw new Error("Failed to load graph snapshot.");
-        }
+    if (!snapshot) {
+      return;
+    }
 
-        const graphSnapshot = (await response.json()) as GraphSnapshot;
-        setSnapshot(graphSnapshot);
-        const seededPositions = Object.fromEntries(positionNodes(graphSnapshot.nodes).map((node) => [node.id, { x: node.x, y: node.y }]));
-        setPositions(seededPositions);
-      } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "Unable to load graph.");
+    const seededPositions = Object.fromEntries(positionNodes(snapshot.nodes).map((node) => [node.id, { x: node.x, y: node.y }]));
+    setPositions((current) => {
+      const next: Record<string, Point> = {};
+      for (const node of snapshot.nodes) {
+        next[node.id] = current[node.id] ?? seededPositions[node.id]!;
       }
-    };
-
-    loadSnapshot();
-  }, []);
+      return next;
+    });
+  }, [snapshot?.version]);
 
   const readPointerPosition = useCallback((event: React.PointerEvent) => {
     const svg = svgRef.current;
@@ -379,7 +376,6 @@ export function LandingNetworkSection() {
           </div>
         </div>
 
-        {error ? <p className="p-6 text-sm text-red-600">{error}</p> : null}
         {!snapshot ? <p className="p-6 text-sm text-[var(--muted)]">Loading graph snapshot...</p> : null}
         {snapshot ? (
           <div>
@@ -443,6 +439,9 @@ export function LandingNetworkSection() {
           </div>
         ) : null}
         {snapshot && filteredGraphNodes.length === 0 ? <p className="px-3 pb-2 text-sm text-[var(--muted)]">No members match this search/filter.</p> : null}
+        {snapshot?.dirty ? (
+          <p className="px-3 pb-2 text-xs text-[var(--muted)]">Graph update in progress. Refresh usually completes within 30–90 seconds.</p>
+        ) : null}
       </div>
     </section>
   );

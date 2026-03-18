@@ -29,7 +29,7 @@ function RevisionDiff({ payload }: { payload: RevisionPayload }) {
   return (
     <div className="adm-diff">
       {textFields.map(({ key, label }) => {
-        const val = payload[key];
+        const val = payload[key] as string | undefined;
         if (val === undefined) return null;
         return (
           <div key={key} className="adm-diff-row">

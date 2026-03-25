@@ -56,9 +56,9 @@ export default function OnboardPage() {
     setStep1Loading(false);
   };
 
-  // Once checkResult arrives, act on it
-  const handleCheckResult = () => {
-    if (!checkResult || !submittedEmail) return;
+  // Trigger step transition when query resolves
+  useEffect(() => {
+    if (!submittedEmail || checkResult === undefined || step !== 1) return;
     if (!checkResult.approved) {
       setStep1Error("not_approved");
       setSubmittedEmail(null);
@@ -71,12 +71,7 @@ export default function OnboardPage() {
     }
     setStep1Error(null);
     setStep(2);
-  };
-
-  // Trigger step transition when query resolves
-  if (submittedEmail && checkResult !== undefined && step === 1 && !step1Loading) {
-    handleCheckResult();
-  }
+  }, [checkResult, submittedEmail, step]);
 
   const onStep2Submit = async (e: FormEvent) => {
     e.preventDefault();
